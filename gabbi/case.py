@@ -232,7 +232,7 @@ class HTTPTestCase(testtools.TestCase):
         if cast in APPROVED_CASTS:
             return APPROVED_CASTS[cast](value)
         else:
-            raise RuntimeError('Invalid cast %s used in %s' % (
+            raise RuntimeError('Invalid cast <%s> used in: %s' % (
                 cast, message))
 
     def _environ_replace(self, message, escape_regex=False):
@@ -455,6 +455,11 @@ class HTTPTestCase(testtools.TestCase):
         """Replace a regex match with the value from a previous response."""
         response_path = match.group('arg')
         case = match.group('case')
+        self.cast = match.group('cast')
+        if not preserve and self.cast:
+            raise RuntimeError(
+                'Unable to process cast <%s> within message: %s'
+                % (self.cast, match.string))
         if case:
             referred_case = self.history[case]
         else:
@@ -467,6 +472,8 @@ class HTTPTestCase(testtools.TestCase):
         result = replacer_class.replacer(
             referred_case.response_data, response_path)
         if preserve:
+            if self.cast:
+                return self._cast_value(result, match.string)
             return result
         else:
             return six.text_type(result)
